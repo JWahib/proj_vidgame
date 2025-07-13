@@ -27,7 +27,9 @@ ps5-games-frontend/
 │   ├── assets/
 │   │   └── images/
 │   │       ├── thumbnails/     # Game thumbnail images
-│   │       └── covers/         # Game cover images
+│   │       ├── covers/         # Game cover images
+│   │       ├── placeholder-thumbnail.svg
+│   │       └── placeholder-cover.svg
 │   └── index.html
 ├── src/
 │   ├── components/
@@ -99,7 +101,8 @@ The frontend is prepared for backend integration with the following consideratio
 ### Image Storage
 - Images are currently stored in `public/assets/images/`
 - Can be easily configured to use CDN or external image services
-- Includes fallback placeholder images for missing assets
+- Includes local SVG placeholder images for missing assets
+- Placeholder images match the dark theme and are optimized for performance
 
 ## Features in Detail
 

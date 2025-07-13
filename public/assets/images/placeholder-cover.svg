@@ -1,0 +1,7 @@
+<svg width="400" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="600" fill="#2d2d2d"/>
+  <text x="200" y="280" font-family="Arial, sans-serif" font-size="16" fill="#ffffff" text-anchor="middle">PS5 Game Cover</text>
+  <text x="200" y="300" font-family="Arial, sans-serif" font-size="14" fill="#b0b0b0" text-anchor="middle">Image Not Found</text>
+  <rect x="50" y="320" width="300" height="2" fill="#404040"/>
+  <text x="200" y="340" font-family="Arial, sans-serif" font-size="12" fill="#808080" text-anchor="middle">PlayStation 5</text>
+</svg>

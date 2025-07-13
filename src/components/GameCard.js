@@ -18,7 +18,7 @@ const GameCard = ({ game }) => {
         className="game-card-image"
         onError={(e) => {
           // Fallback for missing images
-          e.target.src = 'https://via.placeholder.com/300x200/2d2d2d/ffffff?text=PS5+Game';
+          e.target.src = '/assets/images/placeholder-thumbnail.svg';
         }}
       />
       <div className="game-card-content">
