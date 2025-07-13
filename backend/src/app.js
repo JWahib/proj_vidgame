@@ -15,7 +15,15 @@ const PORT = process.env.PORT || 3000;
 
 // Security middleware
 app.use(helmet());
-app.use(cors());
+
+// CORS configuration - allow frontend on port 8000
+app.use(cors({
+  origin: [
+    'http://localhost:8000',  // Frontend development server
+    'http://localhost:3000'   // Backend (for testing)
+  ],
+  credentials: true
+}));
 
 // Rate limiting
 const limiter = rateLimit({
