@@ -35,7 +35,7 @@ const GameDetail = () => {
               className="game-detail-image"
               onError={(e) => {
                 // Fallback for missing images
-                e.target.src = 'https://via.placeholder.com/400x600/2d2d2d/ffffff?text=PS5+Game+Cover';
+                e.target.src = '/assets/images/placeholder-cover.svg';
               }}
             />
           </div>
