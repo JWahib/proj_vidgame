@@ -1,21 +1,170 @@
-# Playstation 5 Video Game Search Engine
+# PlayStation 5 Games Library
 
-## Overview
+A modern React frontend for browsing and discovering PlayStation 5 games, featuring a dark theme, search functionality, and detailed game information.
 
-This project aims to develop a comprehensive search engine dedicated to Playstation 5 (PS5) video games. The website will allow users to efficiently search, discover, and explore a wide range of PS5 titles, providing detailed information and advanced filtering options to enhance the user experience.
+## Features
 
-## Purpose
+- **Dark Theme**: Modern, eye-friendly dark interface
+- **Search Functionality**: Search through games with real-time suggestions
+- **Game Grid**: Alphabetically sorted games with thumbnails
+- **Game Details**: Detailed view with cover images, release dates, and descriptions
+- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **Hover Effects**: Interactive elements with smooth transitions
+- **Routing**: Clean URLs for game details (e.g., `/god-of-war-ragnarok`)
 
-The primary goal of this website is to serve as an all-in-one resource for PS5 gamers, collectors, and enthusiasts seeking information about available and upcoming games. By aggregating and organizing data on PS5 titles, the platform will make it easy to:
+## Technology Stack
 
-- Search for specific games by title, genre, release date, and other criteria
-- Discover new and popular PS5 games
-- Access detailed information about each game, including descriptions, ratings, and more
+- **React 18**: Modern React with hooks
+- **React Router**: Client-side routing
+- **CSS3**: Custom styling with CSS variables and Grid/Flexbox
+- **Responsive Design**: Mobile-first approach
 
-## Features (Planned)
-- Fast and intuitive search functionality
-- Advanced filtering and sorting options
-- Comprehensive game details pages
-- User-friendly and modern interface
+## Project Structure
 
-Stay tuned for updates as development progresses! 
+```
+ps5-games-frontend/
+├── public/
+│   ├── assets/
+│   │   └── images/
+│   │       ├── thumbnails/     # Game thumbnail images
+│   │       └── covers/         # Game cover images
+│   └── index.html
+├── src/
+│   ├── components/
+│   │   ├── GameCard.js         # Individual game card component
+│   │   └── SearchBar.js        # Search functionality component
+│   ├── data/
+│   │   └── games.js           # Game data structure
+│   ├── pages/
+│   │   ├── Home.js            # Main page with game grid
+│   │   └── GameDetail.js      # Individual game details page
+│   ├── App.js                 # Main app component with routing
+│   ├── App.css                # Main stylesheet
+│   └── index.js               # React entry point
+├── package.json
+└── README.md
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (14 or higher)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npm start
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Game Data Structure
+
+Each game in the data structure contains:
+
+```javascript
+{
+  id: number,
+  title: string,
+  releaseDate: string,
+  thumbnail: string,        // Path to thumbnail image
+  coverImage: string,       // Path to cover image
+  description: string       // Game description
+}
+```
+
+## Backend Integration
+
+The frontend is prepared for backend integration with the following considerations:
+
+### Search API
+- The SearchBar component includes placeholder code for backend search calls
+- Expects a search endpoint that returns filtered games based on substring matches
+- Currently uses client-side filtering for demonstration
+
+### Game Data API
+- Game data is currently stored in `src/data/games.js`
+- Can be easily replaced with API calls to fetch game information
+- Structured to match common game database APIs
+
+### Image Storage
+- Images are currently stored in `public/assets/images/`
+- Can be easily configured to use CDN or external image services
+- Includes fallback placeholder images for missing assets
+
+## Features in Detail
+
+### Search Functionality
+- Real-time search with dropdown suggestions
+- Substring matching across game titles
+- Keyboard navigation support
+- Clean URL updates
+
+### Game Grid
+- Responsive grid layout
+- Hover effects with smooth transitions
+- Alphabetical sorting
+- Loading states and error handling
+
+### Game Details
+- Clean URL routing (`/game-title`)
+- Large cover image display
+- Game information including release date and description
+- Back navigation to main grid
+
+### Dark Theme
+- CSS custom properties for consistent theming
+- High contrast for accessibility
+- Smooth transitions and hover effects
+- Mobile-optimized interface
+
+## Customization
+
+### Adding New Games
+1. Add game data to `src/data/games.js`
+2. Add corresponding images to `public/assets/images/thumbnails/` and `public/assets/images/covers/`
+3. Images will automatically be displayed in the grid and detail views
+
+### Styling
+- Modify CSS variables in `src/App.css` to change theme colors
+- Responsive breakpoints can be adjusted in the media queries
+- Component-specific styles are organized by feature
+
+## Browser Support
+
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
+- Mobile browsers
+
+## Future Enhancements
+
+- User authentication
+- Game ratings and reviews
+- Wishlist functionality
+- Advanced filtering options
+- Game comparison features
+- Social sharing
+- PWA capabilities
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details. 
