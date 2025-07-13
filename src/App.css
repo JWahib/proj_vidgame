@@ -63,6 +63,27 @@ body {
   font-size: 1.1rem;
 }
 
+.backend-status {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.backend-status.connected {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.backend-status.disconnected {
+  background-color: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
 /* Search Bar */
 .search-container {
   position: relative;
@@ -237,20 +258,61 @@ body {
 /* Loading and Error States */
 .loading {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 200px;
+  min-height: 400px;
   color: var(--text-secondary);
-  font-size: 1.2rem;
+  text-align: center;
+}
+
+.loading h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.loading p {
+  font-size: 1rem;
+  color: var(--text-muted);
 }
 
 .error {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 200px;
+  min-height: 400px;
   color: #ff6b6b;
-  font-size: 1.2rem;
+  text-align: center;
+}
+
+.error h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #ff6b6b;
+}
+
+.error p {
+  font-size: 1rem;
+  margin-bottom: 2rem;
+  color: var(--text-muted);
+}
+
+.error button {
+  background-color: var(--accent-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.error button:hover {
+  background-color: #0056b3;
 }
 
 /* Responsive Design */

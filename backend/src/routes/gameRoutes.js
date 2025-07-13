@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Game = require('../models/Game');
 const dataScrapingService = require('../services/dataScrapingService');
+const thumbnailService = require('../services/thumbnailService');
 const { validateSearch } = require('../middleware/validation');
 const logger = require('../utils/logger');
 
@@ -96,6 +97,70 @@ router.post('/refreshDB', async (req, res, next) => {
     });
   } catch (error) {
     logger.error('Error refreshing database:', error);
+    next(error);
+  }
+});
+
+// GET /api/games/thumbnails - Get thumbnails for all games
+router.get('/thumbnails', async (req, res, next) => {
+  try {
+    logger.info('Thumbnail request received');
+    
+    const thumbnails = await thumbnailService.getAllThumbnails();
+    
+    res.json({
+      success: true,
+      data: thumbnails,
+      count: thumbnails.length
+    });
+  } catch (error) {
+    logger.error('Error fetching thumbnails:', error);
+    next(error);
+  }
+});
+
+// GET /api/games/:title/:publisher/thumbnail - Get thumbnail for specific game
+router.get('/:title/:publisher/thumbnail', async (req, res, next) => {
+  try {
+    const { title, publisher } = req.params;
+    const decodedTitle = decodeURIComponent(title);
+    const decodedPublisher = decodeURIComponent(publisher);
+    
+    logger.info(`Thumbnail request for: ${decodedTitle} (${decodedPublisher})`);
+    
+    const thumbnailData = await thumbnailService.getThumbnailUrl(decodedTitle, decodedPublisher);
+    
+    if (!thumbnailData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Thumbnail not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: thumbnailData
+    });
+  } catch (error) {
+    logger.error('Error fetching thumbnail:', error);
+    next(error);
+  }
+});
+
+// POST /api/games/update-thumbnails - Update database with thumbnail URLs
+router.post('/update-thumbnails', async (req, res, next) => {
+  try {
+    logger.info('Thumbnail update request received');
+    
+    const result = await thumbnailService.updateDatabaseWithThumbnails();
+    
+    res.json({
+      success: true,
+      message: 'Thumbnail update completed',
+      data: result
+    });
+  } catch (error) {
+    logger.error('Error updating thumbnails:', error);
     next(error);
   }
 });

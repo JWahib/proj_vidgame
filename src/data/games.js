@@ -1,4 +1,5 @@
-const games = [
+// Fallback hardcoded games data
+const fallbackGames = [
   {
     id: 1,
     title: "Astro's Playroom",
@@ -81,4 +82,70 @@ const games = [
   }
 ];
 
+// Backend API configuration
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+
+/**
+ * Fetch games from backend API
+ */
+async function fetchGamesFromBackend() {
+  try {
+    console.log('Fetching games from backend API...');
+    
+    const response = await fetch(`${API_BASE_URL}/games`);
+    
+    if (!response.ok) {
+      throw new Error(`Backend API responded with status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success || !result.data) {
+      throw new Error('Invalid response format from backend API');
+    }
+    
+    console.log(`Successfully fetched ${result.data.length} games from backend`);
+    
+    // Transform backend data to match frontend format
+    return result.data.map((game, index) => ({
+      id: index + 1,
+      title: game.title,
+      releaseDate: game.releaseDate ? new Date(game.releaseDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }) : 'TBA',
+      thumbnail: game.thumbnail || `/assets/images/thumbnails/placeholder-thumbnail.jpg`,
+      coverImage: game.coverImage || `/assets/images/covers/placeholder-cover.jpg`,
+      description: game.description || `Experience ${game.title}, a PlayStation 5 game published by ${game.publisher}.`,
+      publisher: game.publisher,
+      genre: game.genre,
+      rating: game.rating
+    }));
+    
+  } catch (error) {
+    console.warn('Failed to fetch games from backend, using fallback data:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Get games - tries backend first, falls back to hardcoded data
+ */
+async function getGames() {
+  const backendGames = await fetchGamesFromBackend();
+  
+  if (backendGames && backendGames.length > 0) {
+    return backendGames;
+  }
+  
+  console.log('Using fallback games data');
+  return fallbackGames;
+}
+
+// For backward compatibility, export the fallback games as default
+// Components can use this for immediate access, or call getGames() for fresh data
+const games = fallbackGames;
+
+export { getGames };
 export default games;
