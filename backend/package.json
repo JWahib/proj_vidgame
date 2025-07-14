@@ -9,6 +9,12 @@
     "db:setup": "node src/scripts/setupDatabase.js",
     "db:seed": "node src/scripts/seedDatabase.js",
     "test:igdb": "node testIGDBScraping.js",
+    "test:thumbnails": "node testThumbnails.js",
+    "test:covers": "node testCoverImages.js",
+    "test:artworks": "node testArtworks.js",
+    "debug:db": "node debugDatabase.js",
+    "debug:igdb": "node debugIGDBResponse.js",
+    "migrate:db": "node migrateDatabase.js",
     "populate:db": "node populateDatabase.js",
     "recreate:db": "node recreateDatabase.js"
   },

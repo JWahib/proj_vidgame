@@ -43,9 +43,57 @@ class ThumbnailService {
   }
 
   /**
-   * Search for a game on IGDB
+   * Generate IGDB image URLs from image ID
    */
-  async searchGame(title, publisher) {
+  generateImageUrls(imageId) {
+    if (!imageId) return null;
+    
+    return {
+      thumbnail: `https://images.igdb.com/igdb/image/upload/t_thumb/${imageId}.jpg`,
+      cover_small: `https://images.igdb.com/igdb/image/upload/t_cover_small/${imageId}.jpg`,
+      cover_big: `https://images.igdb.com/igdb/image/upload/t_cover_big/${imageId}.jpg`,
+      screenshot_med: `https://images.igdb.com/igdb/image/upload/t_screenshot_med/${imageId}.jpg`,
+      screenshot_huge: `https://images.igdb.com/igdb/image/upload/t_screenshot_huge/${imageId}.jpg`,
+      logo_med: `https://images.igdb.com/igdb/image/upload/t_logo_med/${imageId}.jpg`,
+      logo_huge: `https://images.igdb.com/igdb/image/upload/t_logo_huge/${imageId}.jpg`
+    };
+  }
+
+  /**
+   * Get thumbnail URL for a game using cover_image_id from database
+   */
+  async getThumbnailUrl(title, publisher) {
+    try {
+      // First, try to get the game from our database
+      const game = await Game.findByTitleAndPublisher(title, publisher);
+      
+      if (game && game.cover_image_id) {
+        // We have the image ID, generate URLs directly
+        const imageUrls = this.generateImageUrls(game.cover_image_id);
+        
+        return {
+          thumbnail: imageUrls.thumbnail,
+          cover: imageUrls.cover_big,
+          igdbId: game.igdb_id,
+          name: game.title,
+          source: 'database'
+        };
+      }
+      
+      // Fallback: search IGDB if we don't have the image ID
+      logger.warn(`No cover_image_id found for ${title}, falling back to IGDB search`);
+      return await this.searchGameForThumbnail(title, publisher);
+      
+    } catch (error) {
+      logger.error(`Error getting thumbnail for ${title}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Fallback method: Search for a game on IGDB (legacy method)
+   */
+  async searchGameForThumbnail(title, publisher) {
     try {
       const token = await this.getAccessToken();
       
@@ -96,8 +144,16 @@ class ThumbnailService {
       }
 
       // Only return if we have a good match (score > 0.5)
-      if (bestScore > 0.5) {
-        return bestMatch;
+      if (bestScore > 0.5 && bestMatch.cover) {
+        const imageUrls = this.generateImageUrls(bestMatch.cover.image_id);
+        
+        return {
+          thumbnail: imageUrls.thumbnail,
+          cover: imageUrls.cover_big,
+          igdbId: bestMatch.id,
+          name: bestMatch.name,
+          source: 'search'
+        };
       }
 
       logger.warn(`No good match found for ${title} (${publisher}). Best score: ${bestScore}`);
@@ -109,35 +165,7 @@ class ThumbnailService {
   }
 
   /**
-   * Get thumbnail URL for a game
-   */
-  async getThumbnailUrl(title, publisher) {
-    try {
-      const game = await this.searchGame(title, publisher);
-      
-      if (!game || !game.cover) {
-        logger.warn(`No cover image found for ${title}`);
-        return null;
-      }
-
-      // IGDB image URL format
-      const thumbnailUrl = `https://images.igdb.com/igdb/image/upload/t_thumb/${game.cover.image_id}.jpg`;
-      const coverUrl = `https://images.igdb.com/igdb/image/upload/t_cover_big/${game.cover.image_id}.jpg`;
-
-      return {
-        thumbnail: thumbnailUrl,
-        cover: coverUrl,
-        igdbId: game.id,
-        name: game.name
-      };
-    } catch (error) {
-      logger.error(`Error getting thumbnail for ${title}:`, error.message);
-      return null;
-    }
-  }
-
-  /**
-   * Get thumbnails for all games in the database
+   * Get thumbnails for all games in the database (optimized version)
    */
   async getAllThumbnails() {
     try {
@@ -147,6 +175,8 @@ class ThumbnailService {
       const results = [];
       let successCount = 0;
       let failureCount = 0;
+      let databaseCount = 0;
+      let searchCount = 0;
 
       for (const game of games) {
         try {
@@ -161,9 +191,16 @@ class ThumbnailService {
               thumbnail: thumbnailData.thumbnail,
               cover: thumbnailData.cover,
               igdbId: thumbnailData.igdbId,
-              igdbName: thumbnailData.name
+              igdbName: thumbnailData.name,
+              source: thumbnailData.source
             });
             successCount++;
+            
+            if (thumbnailData.source === 'database') {
+              databaseCount++;
+            } else {
+              searchCount++;
+            }
           } else {
             results.push({
               title: game.title,
@@ -171,13 +208,14 @@ class ThumbnailService {
               thumbnail: null,
               cover: null,
               igdbId: null,
-              igdbName: null
+              igdbName: null,
+              source: 'none'
             });
             failureCount++;
           }
 
-          // Rate limiting - wait 100ms between requests
-          await new Promise(resolve => setTimeout(resolve, 100));
+          // Rate limiting - wait 50ms between requests (faster since we're using database)
+          await new Promise(resolve => setTimeout(resolve, 50));
           
         } catch (error) {
           logger.error(`Error processing ${game.title}:`, error.message);
@@ -187,17 +225,45 @@ class ThumbnailService {
             thumbnail: null,
             cover: null,
             igdbId: null,
-            igdbName: null
+            igdbName: null,
+            source: 'error'
           });
           failureCount++;
         }
       }
 
       logger.info(`Thumbnail fetch completed. Success: ${successCount}, Failures: ${failureCount}`);
+      logger.info(`Database hits: ${databaseCount}, IGDB searches: ${searchCount}`);
       return results;
     } catch (error) {
       logger.error('Error fetching all thumbnails:', error.message);
       throw error;
+    }
+  }
+
+  /**
+   * Get multiple image sizes for a game
+   */
+  async getGameImages(title, publisher) {
+    try {
+      const game = await Game.findByTitleAndPublisher(title, publisher);
+      
+      if (game && game.cover_image_id) {
+        return {
+          game: {
+            title: game.title,
+            publisher: game.publisher,
+            igdbId: game.igdb_id
+          },
+          images: this.generateImageUrls(game.cover_image_id),
+          source: 'database'
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      logger.error(`Error getting images for ${title}:`, error.message);
+      return null;
     }
   }
 
@@ -235,7 +301,7 @@ class ThumbnailService {
   }
 
   /**
-   * Update database with thumbnail URLs
+   * Update database with thumbnail URLs (now just for reference since we have image IDs)
    */
   async updateDatabaseWithThumbnails() {
     try {
@@ -246,10 +312,7 @@ class ThumbnailService {
 
       for (const item of thumbnails) {
         if (item.thumbnail) {
-          // Update the game record with thumbnail URL
-          // Note: You'll need to add thumbnail_url and cover_url columns to your database
-          // and update the Game model to support this
-          logger.info(`Would update ${item.title} with thumbnail: ${item.thumbnail}`);
+          logger.info(`Would update ${item.title} with thumbnail: ${item.thumbnail} (source: ${item.source})`);
           updatedCount++;
         }
       }

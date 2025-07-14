@@ -147,6 +147,34 @@ router.get('/:title/:publisher/thumbnail', async (req, res, next) => {
   }
 });
 
+// GET /api/games/:title/:publisher/images - Get all image sizes for a game
+router.get('/:title/:publisher/images', async (req, res, next) => {
+  try {
+    const { title, publisher } = req.params;
+    const decodedTitle = decodeURIComponent(title);
+    const decodedPublisher = decodeURIComponent(publisher);
+    
+    logger.info(`Images request for: ${decodedTitle} (${decodedPublisher})`);
+    
+    const imageData = await thumbnailService.getGameImages(decodedTitle, decodedPublisher);
+    
+    if (!imageData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Images not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: imageData
+    });
+  } catch (error) {
+    logger.error('Error fetching images:', error);
+    next(error);
+  }
+});
+
 // POST /api/games/update-thumbnails - Update database with thumbnail URLs
 router.post('/update-thumbnails', async (req, res, next) => {
   try {

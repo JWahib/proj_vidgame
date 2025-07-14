@@ -105,18 +105,25 @@ async function fetchGamesFromBackend() {
     }
     
     console.log(`Successfully fetched ${result.data.length} games from backend`);
+    console.log(result.data[0].coverImage);
+
+    console.log(result.data[2]);
     
     // Transform backend data to match frontend format
     return result.data.map((game, index) => ({
       id: index + 1,
       title: game.title,
-      releaseDate: game.releaseDate ? new Date(game.releaseDate).toLocaleDateString('en-US', {
+      releaseDate: game.release_date ? new Date(game.release_date).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
       }) : 'TBA',
-      thumbnail: game.thumbnail || `/assets/images/thumbnails/placeholder-thumbnail.jpg`,
-      coverImage: game.coverImage || `/assets/images/covers/placeholder-cover.jpg`,
+      thumbnail: game.artwork_image_id ? `https://images.igdb.com/igdb/image/upload/t_thumb/${game.artwork_image_id}.jpg` : 
+                game.cover_image_id ? `https://images.igdb.com/igdb/image/upload/t_thumb/${game.cover_image_id}.jpg` : 
+                `/assets/images/thumbnails/placeholder-thumbnail.jpg`,
+      coverImage: game.artwork_image_id ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${game.artwork_image_id}.jpg` : 
+                game.cover_image_id ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${game.cover_image_id}.jpg` : 
+                `/assets/images/covers/placeholder-cover.jpg`,
       description: game.description || `Experience ${game.title}, a PlayStation 5 game published by ${game.publisher}.`,
       publisher: game.publisher,
       genre: game.genre,

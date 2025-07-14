@@ -104,20 +104,13 @@ class DataScrapingService {
    */
   async fetchPS5Games(token, platformId) {
     try {
-      const games = [];
-      let offset = 0;
-      const limit = 500; // IGDB limit per request
-      let hasMore = true;
+      logger.info('Fetching all PS5 games from IGDB...');
 
-      while (hasMore) {
-        logger.info(`Fetching PS5 games with offset ${offset}...`);
-
-        const response = await axios.post(`${this.igdbBaseUrl}/games`, 
-          `fields name,first_release_date,genres.name,cover,rating,rating_count,summary,platforms.name,involved_companies; 
-           where platforms = ${platformId} & first_release_date != null & name != null; 
+              const response = await axios.post(`${this.igdbBaseUrl}/games`, 
+          `fields name,first_release_date,genres.name,artworks,cover,rating,rating_count,summary,platforms.name,involved_companies; 
+           where platforms = (${platformId}) & name != null; 
            sort first_release_date desc; 
-           limit ${limit}; 
-           offset ${offset};`,
+           limit 500;`,
           {
             headers: {
               'Client-ID': this.clientId,
@@ -128,11 +121,13 @@ class DataScrapingService {
         );
 
         if (!response.data || response.data.length === 0) {
-          hasMore = false;
-          break;
+          logger.warn('No PS5 games found');
+          return [];
         }
 
-        // Collect all involved company IDs from all games in this batch
+        logger.info(`Found ${response.data.length} PS5 games`);
+
+        // Collect all involved company IDs from all games
         const allInvolvedCompanyIds = new Set();
         response.data.forEach(game => {
           if (game.involved_companies && game.involved_companies.length > 0) {
@@ -140,7 +135,90 @@ class DataScrapingService {
           }
         });
 
-        // Step 1: Get all involved companies (publishers only) in one call
+        // Collect all artwork IDs from all games
+        const allArtworkIds = new Set();
+        response.data.forEach(game => {
+          if (game.artworks && game.artworks.length > 0) {
+            game.artworks.forEach(id => allArtworkIds.add(id));
+          }
+        });
+
+        // Step 1: Get all artwork image_ids in batches (IGDB has limits)
+        let artworkImageIds = {};
+        if (allArtworkIds.size > 0) {
+          const artworkIdsArray = Array.from(allArtworkIds);
+          const batchSize = 10; // Reduced batch size to avoid IGDB limits
+          
+          for (let i = 0; i < artworkIdsArray.length; i += batchSize) {
+            const batch = artworkIdsArray.slice(i, i + batchSize);
+            const artworksResponse = await axios.post(`${this.igdbBaseUrl}/artworks`, 
+              `fields image_id; 
+               where id = (${batch.join(',')});`,
+              {
+                headers: {
+                  'Client-ID': this.clientId,
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'text/plain'
+                }
+              }
+            );
+
+            // Create a mapping: artwork_id -> image_id
+            if (artworksResponse.data && artworksResponse.data.length > 0) {
+              artworksResponse.data.forEach(artwork => {
+                artworkImageIds[artwork.id] = artwork.image_id;
+              });
+            }
+          }
+          
+          // Debug: Print artworkImageIds mapping
+          console.log('ARTWORK IMAGE ID MAPPING:', artworkImageIds);
+          console.log('TOTAL ARTWORKS FETCHED:', Object.keys(artworkImageIds).length);
+          console.log('TOTAL ARTWORKS REQUESTED:', allArtworkIds.size);
+        }
+
+        // Step 2: Get all cover image_ids in batches (IGDB has limits)
+        const allCoverIds = new Set();
+        response.data.forEach(game => {
+          if (game.cover) {
+            allCoverIds.add(game.cover);
+          }
+        });
+
+        let coverImageIds = {};
+        if (allCoverIds.size > 0) {
+          const coverIdsArray = Array.from(allCoverIds);
+          const batchSize = 10; // Reduced batch size to avoid IGDB limits
+          
+          for (let i = 0; i < coverIdsArray.length; i += batchSize) {
+            const batch = coverIdsArray.slice(i, i + batchSize);
+            const coversResponse = await axios.post(`${this.igdbBaseUrl}/covers`, 
+              `fields image_id; 
+               where id = (${batch.join(',')});`,
+              {
+                headers: {
+                  'Client-ID': this.clientId,
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'text/plain'
+                }
+              }
+            );
+
+            // Create a mapping: cover_id -> image_id
+            if (coversResponse.data && coversResponse.data.length > 0) {
+              coversResponse.data.forEach(cover => {
+                coverImageIds[cover.id] = cover.image_id;
+              });
+            }
+          }
+          
+          // Debug: Print coverImageIds mapping
+          console.log('COVER IMAGE ID MAPPING:', coverImageIds);
+          console.log('TOTAL COVERS FETCHED:', Object.keys(coverImageIds).length);
+          console.log('TOTAL COVERS REQUESTED:', allCoverIds.size);
+        }
+
+        // Step 3: Get all involved companies (publishers only) in one call
         let publisherCompanies = {};
         if (allInvolvedCompanyIds.size > 0) {
           const involvedCompaniesResponse = await axios.post(`${this.igdbBaseUrl}/involved_companies`, 
@@ -155,7 +233,7 @@ class DataScrapingService {
             }
           );
 
-          // Step 2: Get all company names in one call
+          // Step 4: Get all company names in one call
           if (involvedCompaniesResponse.data && involvedCompaniesResponse.data.length > 0) {
             const companyIds = involvedCompaniesResponse.data.map(ic => ic.company);
             const companiesResponse = await axios.post(`${this.igdbBaseUrl}/companies`, 
@@ -181,7 +259,8 @@ class DataScrapingService {
           }
         }
 
-        // Process games with publisher information
+        // Process all games with publisher and cover information
+        const games = [];
         for (const igdbGame of response.data) {
           // Find the first publisher for this game
           let publisher = 'Unknown';
@@ -197,25 +276,30 @@ class DataScrapingService {
           // Add publisher to the game object
           igdbGame.publisher = publisher;
           
+          // Assign artwork_image_id (prefer first artwork, fallback to cover)
+          if (igdbGame.artworks && igdbGame.artworks.length > 0 && artworkImageIds[String(igdbGame.artworks[0])]) {
+            igdbGame.artwork_image_id = artworkImageIds[String(igdbGame.artworks[0])];
+          } else if (igdbGame.cover && coverImageIds[String(igdbGame.cover)]) {
+            igdbGame.artwork_image_id = coverImageIds[String(igdbGame.cover)];
+          } else {
+            igdbGame.artwork_image_id = null;
+          }
+
+          // Assign cover_image_id (always from cover, if available)
+          if (igdbGame.cover && coverImageIds[String(igdbGame.cover)]) {
+            igdbGame.cover_image_id = coverImageIds[String(igdbGame.cover)];
+          } else {
+            igdbGame.cover_image_id = null;
+          }
+          
           const game = this.transformIGDBGame(igdbGame);
           if (game) {
             games.push(game);
           }
         }
 
-        // Check if we got fewer results than the limit (indicating end of data)
-        if (response.data.length < limit) {
-          hasMore = false;
-        } else {
-          offset += limit;
-        }
-
-        // Rate limiting - wait 100ms between requests
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-      logger.info(`Total PS5 games fetched: ${games.length}`);
-      return games;
+        logger.info(`Total PS5 games processed: ${games.length}`);
+        return games;
 
     } catch (error) {
       logger.error('Error fetching PS5 games from IGDB:', error.message);
@@ -274,7 +358,8 @@ class DataScrapingService {
         releaseDate: releaseDate,
         genre: this.cleanText(genre),
         igdbId: igdbGame.id,
-        coverImageId: igdbGame.cover ? igdbGame.cover.image_id : null
+        cover_image_id: igdbGame.cover_image_id || null, // Use the encoded image ID that was already assigned
+        artwork_image_id: igdbGame.artwork_image_id || null // Use the encoded image ID that was already assigned
       };
 
     } catch (error) {
@@ -318,7 +403,7 @@ class DataScrapingService {
       
       const response = await axios.post(`${this.igdbBaseUrl}/games`, 
         `fields name,first_release_date,genres.name,publisher.name,cover,rating,summary; 
-         where platforms.name = "PlayStation 5" & rating > 70 & first_release_date != null; 
+         where platforms = (${platformId}) & rating > 70 & first_release_date != null; 
          sort rating desc; 
          limit 20;`,
         {

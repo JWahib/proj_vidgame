@@ -10,8 +10,12 @@ class Game {
     this.releaseDate = data.releaseDate || null;
     this.thumbnail = data.thumbnail || null;
     this.genre = data.genre || null; // comma-separated string
-    this.igdbId = data.igdbId || null;
-    this.coverImageId = data.coverImageId || null;
+    this.igdbId = data.igdbId || data.igdb_id || null;
+    // Accept both camelCase and snake_case for image IDs
+    this.coverImageId = data.coverImageId || data.cover_image_id || null;
+    this.cover_image_id = this.coverImageId; // always set both
+    this.artworkImageId = data.artworkImageId || data.artwork_image_id || null;
+    this.artwork_image_id = this.artworkImageId; // always set both
   }
 
   static async createTable() {
@@ -27,7 +31,8 @@ class Game {
           release_date DATE,
           genre TEXT,
           igdb_id INTEGER,
-          cover_image_id TEXT,
+          cover_image_id TEXT, -- Legacy field, kept for compatibility
+          artwork_image_id TEXT, -- New field for artwork image_id (preferred)
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           PRIMARY KEY (title, publisher)
@@ -53,8 +58,8 @@ class Game {
       await getDatabase();
       
       const query = `
-        INSERT OR REPLACE INTO games (title, publisher, description, rating, release_date, genre, igdb_id, cover_image_id, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        INSERT OR REPLACE INTO games (title, publisher, description, rating, release_date, genre, igdb_id, cover_image_id, artwork_image_id, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `;
       
       const params = [
@@ -65,7 +70,8 @@ class Game {
         this.releaseDate,
         this.genre,
         this.igdbId,
-        this.coverImageId
+        this.coverImageId,
+        this.artworkImageId
       ];
       
       await runQuery(query, params);
@@ -81,8 +87,8 @@ class Game {
       await getDatabase();
       
       const query = `
-        INSERT OR REPLACE INTO games (title, publisher, description, rating, release_date, genre, igdb_id, cover_image_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO games (title, publisher, description, rating, release_date, genre, igdb_id, cover_image_id, artwork_image_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       
       // Process games in batches to avoid overwhelming the database
@@ -92,7 +98,9 @@ class Game {
       for (let i = 0; i < games.length; i += batchSize) {
         const batch = games.slice(i, i + batchSize);
         
-        for (const game of batch) {
+        for (const gameData of batch) {
+          // Accept both camelCase and snake_case for image IDs
+          const game = new Game(gameData);
           const params = [
             game.title,
             game.publisher,
@@ -101,7 +109,8 @@ class Game {
             game.releaseDate,
             game.genre,
             game.igdbId,
-            game.coverImageId
+            game.coverImageId,
+            game.artworkImageId
           ];
           
           await runQuery(query, params);
@@ -122,7 +131,7 @@ class Game {
       await getDatabase();
       
       let query = `
-        SELECT title, publisher, description, rating, release_date, genre, igdb_id, cover_image_id, created_at, updated_at
+        SELECT title, publisher, description, rating, release_date, genre, igdb_id, cover_image_id, artwork_image_id, created_at, updated_at
         FROM games
         WHERE 1=1
       `;
@@ -165,7 +174,7 @@ class Game {
       await getDatabase();
       
       const query = `
-        SELECT title, publisher, description, rating, release_date, genre, igdb_id, cover_image_id, created_at, updated_at
+        SELECT title, publisher, description, rating, release_date, genre, igdb_id, cover_image_id, artwork_image_id, created_at, updated_at
         FROM games
         WHERE title = ? AND publisher = ?
       `;
@@ -183,7 +192,7 @@ class Game {
       await getDatabase();
       
       const query = `
-        SELECT title, publisher, description, rating, release_date, genre, igdb_id, cover_image_id, created_at, updated_at
+        SELECT title, publisher, description, rating, release_date, genre, igdb_id, cover_image_id, artwork_image_id, created_at, updated_at
         FROM games
         ORDER BY title
       `;
